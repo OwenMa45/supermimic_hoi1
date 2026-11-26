@@ -13,6 +13,7 @@ import numpy as np
 import torch
 from mjlab.viewer import NativeMujocoViewer, ViserPlayViewer
 
+from supermimic.hoi_representation import HoiGenCoordRepresentation
 from supermimic.models import Dynamics
 from supermimic.representations import (
   MaxCoordRepresentation,
@@ -80,6 +81,12 @@ class SuperMimicViewerMixin:
     if free_joint_id >= 0:
       adr = mj_model.joint(free_joint_id).qposadr[0]
       self.free_joint_q_adr = np.arange(adr, adr + 7)
+
+    if isinstance(representation, HoiGenCoordRepresentation):
+      scene = self.env.unwrapped.scene
+      self.free_joint_q_adr = scene["robot"].indexing.free_joint_q_adr.cpu().numpy()
+      self.joint_q_adr = scene["robot"].indexing.joint_q_adr.cpu().numpy()
+      self.box_q_adr = scene["box"].indexing.free_joint_q_adr.cpu().numpy()
 
     self.step_in_rollout = 0
     self.curr_pred_rep_state = None
@@ -320,6 +327,9 @@ class SuperMimicViewerMixin:
             joint_state_start : joint_state_start + len(self.joint_q_adr)
           ]
           qpos[self.joint_q_adr] = joint_state.cpu().numpy()
+          if isinstance(self.representation, HoiGenCoordRepresentation):
+            start = self.representation.robot_full_dim
+            qpos[self.box_q_adr] = state[start : start + 7].cpu().numpy()
           self.wm_vis_qpos = qpos
 
         self.step_in_rollout += 1

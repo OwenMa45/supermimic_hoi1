@@ -218,3 +218,10 @@ __marimo__/
 **/logs/
 **/wandb/*
 **/artifacts/
+
+# SuperMimic HOI local project records and experiment outputs
+/knowledge/
+/plans/
+/maintenance/
+/outputs/
+/AGENTS.md

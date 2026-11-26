@@ -17,6 +17,7 @@ import supermimic.tasks  # noqa: F401
 from supermimic.representations import extract_actor_goal
 from supermimic.runners.run_config import check_representation_matches, load_runner_cfg
 from supermimic.runners.supermimic_runner import build_actor, build_world_model
+from supermimic.tasks.hoi_env import configure_hoi_scene
 from supermimic.tasks.task_spec import build_actor_obs_td
 from supermimic.utils.wandb_artifacts import (
   download_artifact_cached,
@@ -28,6 +29,7 @@ from supermimic.utils.wandb_artifacts import (
 class BenchmarkConfig:
   wandb_path: str
   task_id: str = "SuperMimic-GenCoord-G1"
+  motion_file: str | None = None
   device: str | None = None
 
   num_envs_list: list[int] = field(
@@ -58,9 +60,9 @@ def benchmark(cfg: BenchmarkConfig) -> None:
   results = []
 
   # Resolve the run's linked motion clip once; reused for every num_envs.
-  motion_file_path = None
+  motion_file_path = cfg.motion_file
   motion_artifact = next((a for a in run.used_artifacts() if a.type == "motions"), None)
-  if motion_artifact:
+  if motion_artifact and motion_file_path is None:
     motion_file_path = str(download_artifact_cached(motion_artifact) / "motion.npz")
 
   for n_envs in cfg.num_envs_list:
@@ -79,6 +81,7 @@ def benchmark(cfg: BenchmarkConfig) -> None:
       if motion_file_path:
         env_cfg.commands["motion"].motion_file = motion_file_path
 
+      configure_hoi_scene(env_cfg, with_wrists=runner_cfg.use_wrist_features)
       base_env = ManagerBasedRlEnv(cfg=env_cfg, device=device)
       env = RslRlVecEnvWrapper(base_env)
 
@@ -159,7 +162,7 @@ def benchmark(cfg: BenchmarkConfig) -> None:
         (n_envs, representation.rep_state_dim), device=device
       )
       dummy_action = torch.randn((n_envs, wm.num_actions), device=device)
-      dummy_aux = torch.randn((n_envs, 7), device=device)
+      dummy_aux = representation.extract_aux_state(obs["full_state"])
       dummy_sim_ctx = torch.randn((n_envs, wm.sim_context.output_dim), device=device)
 
       # Warmup

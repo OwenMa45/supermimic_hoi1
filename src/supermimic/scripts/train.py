@@ -11,12 +11,17 @@ from mjlab.envs import ManagerBasedRlEnvCfg
 from mjlab.tasks.registry import list_tasks, load_env_cfg
 
 import supermimic.tasks  # noqa: F401
+from supermimic.runners.run_config import (
+  check_representation_matches,
+  representation_for_task,
+)
 from supermimic.runners.supermimic_runner import SuperMimicRunner, SuperMimicRunnerCfg
 from supermimic.scripts.train_utils import (
   create_env,
   download_registry_motions,
   setup_device,
 )
+from supermimic.tasks.hoi_env import configure_hoi_scene
 
 
 @dataclass
@@ -35,7 +40,10 @@ class TrainConfig:
     env_cfg = load_env_cfg(task_id, play=False)
     return TrainConfig(
       env=env_cfg,
-      runner=SuperMimicRunnerCfg(),
+      runner=SuperMimicRunnerCfg(representation=representation_for_task(task_id)),
+      registry_name=None
+      if representation_for_task(task_id) == "hoi_gencoord"
+      else "supermimic/wandb-registry-motions/lafan_run1_subject5",
     )
 
 
@@ -78,6 +86,8 @@ def main() -> None:
     args.runner.representation = "maxcoord"
     print("[INFO] Auto-detected maxcoord representation from task_id")
 
+  check_representation_matches(chosen_task, args.runner.representation)
+  configure_hoi_scene(args.env, with_wrists=args.runner.use_wrist_features)
   args.env.commands["motion"].sampling_mode = (
     "external" if args.runner.sampling_mode == "return" else args.runner.sampling_mode
   )

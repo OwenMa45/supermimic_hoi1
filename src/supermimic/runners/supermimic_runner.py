@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import time
 from concurrent.futures import Future, ThreadPoolExecutor
 from dataclasses import asdict, dataclass, field
@@ -54,7 +55,8 @@ class SuperMimicRunnerCfg:
   wandb_run_path: str | None = None
   headless: bool = True
   buffer_size: int = 1000
-  representation: str = "gencoord"  # "gencoord" or "maxcoord"
+  representation: str = "gencoord"
+  use_wrist_features: bool = True  # Carry Box 24D / 18D ablation.
   actor_obs: str = "rep_state"  # "rep_state" or "proprio"
   log_interval: int = 10
   save_interval: int = 1000
@@ -142,6 +144,7 @@ def build_world_model(
     env.unwrapped.cfg.decimation,
     default_joint_pos,
     actor_obs_mode=cfg.actor_obs,
+    use_wrist_features=cfg.use_wrist_features,
   ).to(device)
 
   representation.bind(env.unwrapped, sim_context)
@@ -573,6 +576,10 @@ class SuperMimicRunner:
 
   def run(self) -> None:
     log_dir = self._create_log_dir()
+    if self.cfg.representation == "hoi_gencoord":
+      (log_dir / "runner_cfg.json").write_text(
+        json.dumps(asdict(self.cfg), indent=2), encoding="utf-8"
+      )
     self._init_wandb(log_dir)
 
     self.env.reset()

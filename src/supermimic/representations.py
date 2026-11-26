@@ -61,11 +61,17 @@ def create_representation(
   decimation: int,
   default_joint_pos: torch.Tensor,
   actor_obs_mode: str,
+  use_wrist_features: bool = True,
 ) -> StateRepresentation:
   """Create a state representation wired up for training and reward compute."""
   if name == "gencoord":
     num_joints = infer_num_joints_from_state_dim(full_state_dim)
     rep: StateRepresentation = GenCoordRepresentation(num_joints, default_joint_pos)
+  elif name == "hoi_gencoord":
+    from supermimic.hoi_representation import HoiGenCoordRepresentation
+
+    num_joints = infer_num_joints_from_state_dim(full_state_dim - 13)
+    rep = HoiGenCoordRepresentation(num_joints, default_joint_pos, use_wrist_features)
   elif name == "maxcoord":
     if full_state_dim % 13 != 0:
       raise ValueError(
@@ -74,7 +80,7 @@ def create_representation(
     rep = MaxCoordRepresentation(full_state_dim // 13, default_joint_pos)
   else:
     raise ValueError(
-      f"Unknown representation: {name}. Must be 'gencoord' or 'maxcoord'."
+      f"Unknown representation: {name}. Expected gencoord, hoi_gencoord or maxcoord."
     )
   rep.actor_obs_mode = actor_obs_mode
   if actor_obs_mode == "proprio":

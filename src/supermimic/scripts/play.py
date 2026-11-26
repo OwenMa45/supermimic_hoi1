@@ -25,6 +25,7 @@ from supermimic.scripts.viewers import (
   SuperMimicViserViewer,
   create_wm_vis_model,
 )
+from supermimic.tasks.hoi_env import configure_hoi_scene
 from supermimic.utils.wandb_artifacts import (
   download_artifact_cached,
   download_model_dir,
@@ -84,6 +85,7 @@ def play(task_id: str, cfg: PlayConfig) -> None:
     motion_names = [a.name.split(":")[0] for a in motion_artifacts]
     print(f"[INFO] Loaded {len(motion_files)} motion(s)")
 
+  configure_hoi_scene(env_cfg, with_wrists=runner_cfg.use_wrist_features)
   env = RslRlVecEnvWrapper(ManagerBasedRlEnv(cfg=env_cfg, device=device))
 
   wm = build_world_model(runner_cfg, env, device)

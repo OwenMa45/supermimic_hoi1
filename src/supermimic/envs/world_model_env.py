@@ -12,6 +12,10 @@ from typing import TYPE_CHECKING
 import torch
 from tensordict import TensorDict
 
+from supermimic.hoi_representation import (
+  HoiGenCoordRepresentation,
+  item_tracking_reward,
+)
 from supermimic.tasks.task_spec import TaskSpec, build_actor_obs_td
 
 if TYPE_CHECKING:
@@ -99,6 +103,11 @@ class WorldModelEnv:
       self.last_actions,
       *self._ref_body_state,
     )
+    if isinstance(self.representation, HoiGenCoordRepresentation):
+      target = self.motion.item_state_w[self.motion_times]
+      rewards = rewards + self.representation.dt * item_tracking_reward(
+        self.aux_state[..., 7:], target
+      )
     self.last_actions = actions
 
     self._compute_commands()
